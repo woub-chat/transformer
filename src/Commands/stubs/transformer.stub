@@ -1,0 +1,14 @@
+<?php
+
+namespace {{ namespace }};
+
+use Bfg\Transformer\Transformer;
+
+class {{ class }} extends Transformer
+{
+    protected $model{{t_model}};
+
+    protected $toModel = [
+        //
+    ];
+}
