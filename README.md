@@ -65,12 +65,30 @@ All transformation casting rules are completely copied from the
 and their functionality is absolutely identical (except for the `set` of custom casts):
 ```php
 ...
-    protected array $casts = [
+    protected $casts = [
         'views' => 'int'
     ];
 ...
 ```
 > Applies to data, not to the model.
+
+### Defaults
+```php
+...
+    protected $toModelDefault = [
+        'active' => 1
+    ];
+...
+```
+
+```php
+...
+    protected $fromModelDefault = [
+        'active' => 1
+    ];
+...
+```
+
 
 ### Model catch
 In order to catch a model definition for a transformer (based on data), you can use the `getModel` method:
