@@ -109,13 +109,14 @@ use App\Transformers\UserTransformer;
 ...
 $model = User::find(1);
 
-$data = UserTransformer::toModel($model); 
+$data = UserTransformer::fromModel($model); 
     // => ['userName' => 'Thomas','userEmail' => 'thomas@example.com']
 ```
 
 ### Data to model collection
 ```php
 use App\Transformers\UserTransformer;
+use App\Transformers\TransformerCollection;
 ...
 $datas = [
     [
@@ -128,17 +129,38 @@ $datas = [
     ],
 ]; // for example, any data
 
+/** @var TransformerCollection $collection */
 $collection = UserTransformer::toModelCollection($datas); // The collection instance of models Instances
 ```
 Next, the collection perceives all the methods of the model to the entire collection:
 ```php
+use App\Transformers\TransformerCollection;
+...
+/** @var TransformerCollection $collection */
 $collection->save();
 ```
 To start the entire chain in the transaction:
 ```php
+use App\Transformers\TransformerCollection;
+...
+/** @var TransformerCollection $collection */
 $collection->transaction()->save();
 // For additional updating
 $collection->transaction()->save()->update([
     'api_updated_at' => now()
 ]);
+```
+
+### Data from model collection
+```php
+use App\Models\User;
+use App\Transformers\UserTransformer;
+...
+$modelCollection = User::where('active', 1)->get();
+
+$data = UserTransformer::fromModelCollection($modelCollection); 
+    // => [
+    //      ['userName' => 'Thomas','userEmail' => 'thomas@example.com'],
+    //      ['userName' => 'Ali','userEmail' => 'ali@example.com'],
+    //    ]
 ```
