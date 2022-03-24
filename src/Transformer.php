@@ -21,6 +21,8 @@ abstract class Transformer
     protected $model;
     protected $toModel = [];
     protected $fromModel = [];
+    protected $toModelDefault = [];
+    protected $fromModelDefault = [];
     protected $casts = [];
     protected $classCastCache = [];
     protected $dateFormat = 'Y-m-d H:i:s';
@@ -52,7 +54,7 @@ abstract class Transformer
             $newFromModel[$modelKey] = $dataKey;
         }
         $this->toModel = $newToModel;
-        $this->fromModel = $newFromModel;
+        $this->fromModel = $newFromModel ?: array_flip($newToModel);
     }
 
     protected function convertToModel()
@@ -64,6 +66,8 @@ abstract class Transformer
             );
 
             $methodMutator = 'to'.ucfirst(Str::camel($modelKey)).'Attribute';
+
+            $dataValue = $dataValue ?: ($this->toModelDefault[$modelKey] ?? null);
 
             if (method_exists($this, $methodMutator)) {
                 $dataValue = $this->{$methodMutator}($dataValue);
@@ -77,9 +81,7 @@ abstract class Transformer
 
     protected function convertFromModel()
     {
-        $fields = $this->fromModel ?: array_flip($this->toModel);
-
-        foreach ($fields as $modelKey => $dataKey) {
+        foreach ($this->fromModel as $modelKey => $dataKey) {
             $modelValue = $this->__dotCall($modelKey, $this->model);
 
             $methodMutator = 'from'.ucfirst(Str::camel($modelKey)).'Attribute';
@@ -87,6 +89,8 @@ abstract class Transformer
             if (method_exists($this, $methodMutator)) {
                 $modelValue = $this->{$methodMutator}($modelValue);
             }
+
+            $modelValue = $modelValue ?: ($this->fromModelDefault[$dataKey] ?? null);
 
             if (is_array($this->data)) {
                 Arr::set($this->data, $dataKey, $modelValue);
