@@ -146,13 +146,15 @@ abstract class Transformer
         return (new static($data, $model))->convertFromModel();
     }
 
-    public static function toModelCollection(object|array $datas): TransformerCollection
-    {
+    public static function toModelCollection(
+        object|array $datas,
+        Collection $modelCollection = null
+    ): TransformerCollection {
         $collection = app(TransformerCollection::class);
 
-        foreach ($datas as $data) {
+        foreach ($datas as $key => $data) {
             $collection->push(
-                static::toModel($data)
+                static::toModel($data, $modelCollection ? ($modelCollection[$key] ?? null) : null)
             );
         }
 
@@ -167,8 +169,8 @@ abstract class Transformer
             $collection->push(
                 static::fromModel(
                     $model, $datas
-                        ? (is_array($datas) ? ($datas[$key] ?? []) : ($datas->{$key} ?? []))
-                        : []
+                    ? (is_array($datas) ? ($datas[$key] ?? []) : ($datas->{$key} ?? []))
+                    : []
                 )
             );
         }

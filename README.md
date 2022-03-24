@@ -98,6 +98,8 @@ $data = [
 ]; // for example, any data
 
 $model = UserTransformer::toModel($data); // Instance of User model
+// Or from any model
+$model = UserTransformer::toModel($data, User::find(1)); // With my instance of User model
 
 $model->save();
 ```
@@ -111,10 +113,21 @@ $model = User::find(1);
 
 $data = UserTransformer::fromModel($model); 
     // => ['userName' => 'Thomas','userEmail' => 'thomas@example.com']
+
+// Or with you data filling
+$fillData = (object) ['userName' => null, 'userEmail' => null, 'otherData' => 'test']
+$data = UserTransformer::fromModel($model, $fillData); 
+    // => {
+    //      +"userName": "Thomas",
+    //      +"userEmail": "thomas@example.com",
+    //      +"otherData": "test",
+    //    }
+
 ```
 
 ### Data to model collection
 ```php
+use App\Models\User;
 use App\Transformers\UserTransformer;
 use App\Transformers\TransformerCollection;
 ...
@@ -131,6 +144,21 @@ $datas = [
 
 /** @var TransformerCollection $collection */
 $collection = UserTransformer::toModelCollection($datas); // The collection instance of models Instances
+    // => Bfg\Transformer\TransformerCollection {
+    //      all: [
+    //          App\Models\User {
+    //              userName: "Thomas",
+    //              userEmail: "thomas@example.com"
+    //          },
+    //          App\Models\User {
+    //              userName: "Ali",
+    //              userEmail: "ali@example.com"
+    //          },
+    //      ]
+    //    }
+   
+// Or with ready collection of models   
+$collection = UserTransformer::toModelCollection($datas, User::where('active', 1)->get());
 ```
 Next, the collection perceives all the methods of the model to the entire collection:
 ```php
@@ -155,12 +183,26 @@ $collection->transaction()->save()->update([
 ```php
 use App\Models\User;
 use App\Transformers\UserTransformer;
+use App\Transformers\TransformerCollection;
 ...
 $modelCollection = User::where('active', 1)->get();
 
 $data = UserTransformer::fromModelCollection($modelCollection); 
-    // => [
-    //      ['userName' => 'Thomas','userEmail' => 'thomas@example.com'],
-    //      ['userName' => 'Ali','userEmail' => 'ali@example.com'],
-    //    ]
+    // => Bfg\Transformer\TransformerCollection {
+    //      all: [
+    //          ['userName' => 'Thomas','userEmail' => 'thomas@example.com'],
+    //          ['userName' => 'Ali','userEmail' => 'ali@example.com'],
+    //      ]
+    //    }
+
+// Or with you data filling
+$fillData = (object) [
+    ['userName' => null, 'userEmail' => null, 'otherData' => 'test'],
+    ['userName' => null, 'userEmail' => null, 'otherData' => 'test2'],
+];
+$data = UserTransformer::fromModelCollection($modelCollection, $fillData); 
+    // => {
+    //      ['userName' => 'Thomas','userEmail' => 'thomas@example.com', 'otherData' => 'test'],
+    //      ['userName' => 'Ali','userEmail' => 'ali@example.com', 'otherData' => 'test2'],
+    //    }
 ```
