@@ -33,6 +33,15 @@ class TransformerCollection extends Collection
         return $this;
     }
 
+    public function model()
+    {
+        foreach ($this->items as $key => $model) {
+            $this->items[$key] = $model->model();
+        }
+
+        return $this;
+    }
+
     protected function applyMethod($method, $parameters)
     {
         foreach ($this->items as $model) {

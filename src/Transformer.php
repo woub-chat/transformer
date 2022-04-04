@@ -163,6 +163,11 @@ abstract class Transformer
         return $this->model->{$name};
     }
 
+    public function model()
+    {
+        return $this->model;
+    }
+
     /**
      * @param ...$transformers
      * @return TransformerCollection|MODEL_TEMPLATE[]
