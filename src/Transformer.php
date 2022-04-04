@@ -35,7 +35,9 @@ abstract class Transformer
         public object|array $data = [],
         object|string|null $model = null,
     ) {
-        $this->model = $model;
+        if ($model) {
+            $this->model = $model;
+        }
         $this->model = $this->getModel();
         $this->prepareMappings();
     }
