@@ -165,12 +165,12 @@ $collection = UserTransformer::toModelCollection($datas); // The collection inst
     // => Bfg\Transformer\TransformerCollection {
     //      all: [
     //          App\Models\User {
-    //              userName: "Thomas",
-    //              userEmail: "thomas@example.com"
+    //              name: "Thomas",
+    //              email: "thomas@example.com"
     //          },
     //          App\Models\User {
-    //              userName: "Ali",
-    //              userEmail: "ali@example.com"
+    //              name: "Ali",
+    //              email: "ali@example.com"
     //          },
     //      ]
     //    }

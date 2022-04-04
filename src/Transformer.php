@@ -35,9 +35,7 @@ abstract class Transformer
         public object|array $data = [],
         object|string|null $model = null,
     ) {
-        $this->model = $model
-            ? (is_string($model) ? app($model) : $model)
-            : $this->getModel();
+        $this->model = $this->getModel($model);
         $this->prepareMappings();
     }
 
@@ -102,13 +100,17 @@ abstract class Transformer
         return $this->data;
     }
 
-    protected function getModel()
-    {
-        return app($this->model);
+    protected function getModel(
+        object|string|null $model = null
+    ) {
+        $model = $model ?: $this->model;
+        return is_string($model) ? app($model) : $model;
     }
 
-    protected function __dotCall(string $path, mixed $data)
-    {
+    protected function __dotCall(
+        string $path,
+        mixed $data
+    ) {
         $split = explode('.', $path);
 
         foreach ($split as $item) {
@@ -140,20 +142,66 @@ abstract class Transformer
         return $data;
     }
 
-    public static function toModel(object|array $data, object|string|null $model = null)
+    public function __call(string $name, array $arguments)
     {
+        return call_user_func_array([$this->model, $name], $arguments);
+    }
+
+    /**
+     * @param ...$transformers
+     * @return TransformerCollection|MODEL_TEMPLATE[]
+     */
+    public function and(...$transformers)
+    {
+        $collection = app(TransformerCollection::class);
+
+        $collection->push($this);
+
+        foreach ($transformers as $transformer) {
+            if (class_exists($transformer)) {
+                $collection->push(
+                    $transformer::toModel($this->data, $this->model)
+                );
+            }
+        }
+
+        return $collection;
+    }
+
+    /**
+     * @param  object|array  $data
+     * @param  MODEL_TEMPLATE|object|string|null  $model
+     * @return \Illuminate\Contracts\Foundation\Application|Model|mixed|object|string|static|MODEL_TEMPLATE
+     */
+    public static function toModel(
+        object|array $data,
+        object|string|null $model = null
+    ) {
         return (new static($data, $model))->convertToModel();
     }
 
-    public static function fromModel(object|string|null $model, mixed $data = [])
-    {
+    /**
+     * @template SET_DATA
+     * @param  object|string|null  $model
+     * @param  mixed|SET_DATA  $data
+     * @return SET_DATA|array|object
+     */
+    public static function fromModel(
+        object|string|null $model,
+        mixed $data = []
+    ) {
         return (new static($data, $model))->convertFromModel();
     }
 
+    /**
+     * @param  object|array  $datas
+     * @param  Collection|null  $modelCollection
+     * @return TransformerCollection|MODEL_TEMPLATE[]
+     */
     public static function toModelCollection(
         object|array $datas,
         Collection $modelCollection = null
-    ): TransformerCollection {
+    ): TransformerCollection  {
         $collection = app(TransformerCollection::class);
 
         foreach ($datas as $key => $data) {
@@ -165,8 +213,16 @@ abstract class Transformer
         return $collection;
     }
 
-    public static function fromModelCollection(Collection $modelCollection, mixed $datas = []): TransformerCollection
-    {
+    /**
+     * @template SET_DATA
+     * @param  Collection  $modelCollection
+     * @param  mixed  $datas
+     * @return TransformerCollection|SET_DATA[]
+     */
+    public static function fromModelCollection(
+        Collection $modelCollection,
+        mixed $datas = []
+    ): TransformerCollection {
         $collection = app(TransformerCollection::class);
 
         foreach ($modelCollection as $key => $model) {
