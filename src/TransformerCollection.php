@@ -36,12 +36,10 @@ class TransformerCollection extends Collection
     protected function applyMethod($method, $parameters)
     {
         foreach ($this->items as $model) {
-            if ($model instanceof Model) {
-                call_user_func_array(
-                    [$model, $method],
-                    $parameters
-                );
-            }
+            call_user_func_array(
+                [$model, $method],
+                $parameters
+            );
         }
     }
 }
