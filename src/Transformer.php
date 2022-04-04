@@ -58,6 +58,8 @@ abstract class Transformer
 
     protected function convertToModel()
     {
+        $insert = [];
+
         foreach ($this->toModel as $dataKey => $modelKey) {
             $dataValue = $this->fieldCasting(
                 $dataKey,
@@ -69,13 +71,21 @@ abstract class Transformer
             $dataValue = $dataValue ?: ($this->toModelDefault[$modelKey] ?? null);
 
             if (method_exists($this, $methodMutator)) {
+
                 $dataValue = $this->{$methodMutator}($dataValue);
             }
 
-            $this->model->{$modelKey} = $dataValue;
+            $insert[$modelKey] = $dataValue;
         }
 
+        $this->fillableModel($insert);
+
         return $this->model;
+    }
+
+    protected function fillableModel(array $insert)
+    {
+        $this->model->fill($insert);
     }
 
     protected function convertFromModel()
