@@ -35,7 +35,8 @@ abstract class Transformer
         public object|array $data = [],
         object|string|null $model = null,
     ) {
-        $this->model = $this->getModel($model);
+        $this->model = $model;
+        $this->model = $this->getModel();
         $this->prepareMappings();
     }
 
@@ -100,11 +101,9 @@ abstract class Transformer
         return $this->data;
     }
 
-    protected function getModel(
-        object|string|null $model = null
-    ) {
-        $model = $model ?: $this->model;
-        return is_string($model) ? app($model) : $model;
+    protected function getModel() {
+
+        return is_string($this->model) ? app($this->model) : $this->model;
     }
 
     protected function __dotCall(
