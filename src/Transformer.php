@@ -80,7 +80,7 @@ abstract class Transformer
 
         $this->fillableModel($insert);
 
-        return $this->model;
+        return $this;
     }
 
     protected function fillableModel(array $insert)
