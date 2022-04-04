@@ -146,6 +146,11 @@ abstract class Transformer
         return call_user_func_array([$this->model, $name], $arguments);
     }
 
+    public function __get(string $name)
+    {
+        return $this->model->{$name};
+    }
+
     /**
      * @param ...$transformers
      * @return TransformerCollection|MODEL_TEMPLATE[]
