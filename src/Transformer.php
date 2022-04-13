@@ -178,12 +178,12 @@ abstract class Transformer
 
     protected function updateModel(array $input)
     {
-        return $this->model->update($input);
+        return ($this->relation ?? $this->model)->update($input);
     }
 
     protected function createModel(array $input)
     {
-        return $this->model = $this->model->create($input);
+        return $this->model = ($this->relation ?? $this->model)->create($input);
     }
 
     protected function getDataForUpload(): object|array
