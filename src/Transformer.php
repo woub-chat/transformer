@@ -4,104 +4,135 @@ namespace Bfg\Transformer;
 
 use Bfg\Transformer\Traits\TransformerDataCasting;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-/**
- * @template MODEL_TEMPLATE
- */
-abstract class Transformer
+class Transformer
 {
     use TransformerDataCasting;
 
-    /**
-     * @var MODEL_TEMPLATE|Model|object|string
-     */
-    protected $model;
-    protected $toModel = [];
-    protected $fromModel = [];
-    protected $toModelDefault = [];
-    protected $fromModelDefault = [];
+    protected array $toModel = [
+//        'dataField' => 'modelField',
+//        YouTransformer::class => 'modelRelation'
+    ];
+    protected array $fromModel = [];
+
     protected $casts = [];
     protected $classCastCache = [];
     protected $dateFormat = 'Y-m-d H:i:s';
 
     /**
-     * @param  object|array  $data
-     * @param  MODEL_TEMPLATE|object|string|null  $model
+     * @var array|Transformer[]
      */
+    protected array $toRelatedModel = [];
+
     public function __construct(
+        public Model|string $model,
         public object|array $data = [],
-        object|string|null $model = null,
+        public ?Relation $relation = null,
+        public ?Transformer $parent = null,
     ) {
-        if ($model) {
-            $this->model = $model;
-        }
+        $this->model = is_string($this->model) ? new $this->model : $this->model;
+    }
+
+    protected function getModel()
+    {
+        return $this->model;
+    }
+
+    protected function getData()
+    {
+        return $this->data;
+    }
+
+    protected function getDataCollection()
+    {
+        return null;
+    }
+
+    public function toModel(): TransformerCollection|static
+    {
         $this->model = $this->getModel();
-        $this->prepareMappings();
-    }
+        $this->data = $this->getData();
 
-    protected function prepareMappings()
-    {
-        $newToModel = [];
-        $newFromModel = [];
-        foreach ($this->toModel as $dataKey => $modelKey) {
-            $dataKey = is_int($dataKey) ? $modelKey : $dataKey;
-            $newToModel[$dataKey] = $modelKey;
-        }
-        foreach ($this->fromModel as $modelKey => $dataKey) {
-            $modelKey = is_int($modelKey) ? $dataKey : $modelKey;
-            $newFromModel[$modelKey] = $dataKey;
-        }
-        $this->toModel = $newToModel;
-        $this->fromModel = $newFromModel ?: array_flip($newToModel);
-    }
+        if ($this->data instanceof Collection) {
 
-    protected function convertToModel()
-    {
-        $insert = [];
+            $collection = app(TransformerCollection::class);
 
-        foreach ($this->toModel as $dataKey => $modelKey) {
-            $dataValue = $this->fieldCasting(
-                $dataKey,
-                $this->__dotCall($dataKey, $this->data)
-            );
+            foreach ($this->data as $datum) {
 
-            $methodMutator = 'to'.ucfirst(Str::camel($modelKey)).'Attribute';
-
-            $dataValue = $dataValue ?: ($this->toModelDefault[$modelKey] ?? null);
-
-            if (method_exists($this, $methodMutator)) {
-
-                $dataValue = $this->{$methodMutator}($dataValue);
+                $collection->push(
+                    static::make($this->model, $datum)->toModel()
+                );
             }
 
-            $insert[$modelKey] = $dataValue;
+            return $collection;
         }
 
-        $this->fillableModel($insert);
+        $dataToModel = [];
+
+        foreach ($this->toModel as $dataKey => $modelKey) {
+
+            if (class_exists($dataKey)) {
+                $relation = $this->model->{$modelKey}();
+                if ($relation instanceof Relation) {
+                    /** @var Transformer $dataKey */
+                    $this->toRelatedModel[$modelKey] = $dataKey::make(
+                        $relation->getRelated(), $this->data, $relation, $this
+                    );
+                }
+            } else {
+                $dataToModel[$modelKey] = recursive_get($this->data, $dataKey);
+                $methodMutator = 'to'.ucfirst(Str::camel($modelKey)).'Attribute';
+                if (method_exists($this, $methodMutator)) {
+                    $dataToModel[$modelKey] = $this->{$methodMutator}($dataToModel[$modelKey]);
+                }
+            }
+        }
+
+        $this->toModel = $dataToModel;
 
         return $this;
     }
 
-    protected function fillableModel(array $insert)
+    public function save()
     {
-        $this->model->fill($insert);
+        if ($this->model->exists) {
+            $result = $this->updateModel($this->toModel);
+        } else {
+            $result = $this->createModel($this->toModel);
+        }
+
+        foreach ($this->toRelatedModel as $item) {
+
+            $item->toModel()->save();
+        }
+
+        return $result;
     }
 
-    protected function convertFromModel()
+    protected function updateModel(array $input)
+    {
+        return $this->model->update($input);
+    }
+
+    protected function createModel(array $input)
+    {
+        return $this->model = $this->model->create($input);
+    }
+
+    public function toData(): array|object
     {
         foreach ($this->fromModel as $modelKey => $dataKey) {
-            $modelValue = $this->__dotCall($modelKey, $this->model);
+            $modelValue = recursive_get($this->model, $modelKey);
 
             $methodMutator = 'from'.ucfirst(Str::camel($modelKey)).'Attribute';
 
             if (method_exists($this, $methodMutator)) {
                 $modelValue = $this->{$methodMutator}($modelValue);
             }
-
-            $modelValue = $modelValue ?: ($this->fromModelDefault[$dataKey] ?? null);
 
             if (is_array($this->data)) {
                 Arr::set($this->data, $dataKey, $modelValue);
@@ -110,152 +141,19 @@ abstract class Transformer
             }
         }
 
+
         return $this->data;
     }
 
-    protected function getModel() {
-
-        return is_string($this->model) ? app($this->model) : $this->model;
-    }
-
-    protected function __dotCall(
-        string $path,
-        mixed $data
+    public static function make(
+        Model|string $model,
+        object|array $data = [],
+        ?Relation $relation = null,
+        ?Transformer $parent = null,
     ) {
-        $split = explode('.', $path);
-
-        foreach ($split as $item) {
-            try {
-                if ($data instanceof \Illuminate\Support\Collection) {
-                    $data = $data->get($item);
-                } else {
-                    if (is_object($data)) {
-                        try {
-                            $data = $data->{$item};
-                        } catch (\Exception $exception) {
-                            $data = $data->{$item}();
-                        }
-                    } else {
-                        if (is_array($data)) {
-                            $data = $data[$item] ?? null;
-                        }
-                    }
-                }
-
-                if ($data === null) {
-                    return null;
-                }
-            } catch (\Exception $exception) {
-                return null;
-            }
-        }
-
-        return $data;
-    }
-
-    public function __call(string $name, array $arguments)
-    {
-        return call_user_func_array([$this->model, $name], $arguments);
-    }
-
-    public function __get(string $name)
-    {
-        return $this->model->{$name};
-    }
-
-    public function model()
-    {
-        return $this->model;
-    }
-
-    /**
-     * @param ...$transformers
-     * @return TransformerCollection|MODEL_TEMPLATE[]
-     */
-    public function and(...$transformers)
-    {
-        $collection = app(TransformerCollection::class);
-
-        $collection->push($this);
-
-        foreach ($transformers as $transformer) {
-            if (class_exists($transformer)) {
-                $collection->push(
-                    $transformer::toModel($this->data, $this->model)
-                );
-            }
-        }
-
-        return $collection;
-    }
-
-    /**
-     * @param  object|array  $data
-     * @param  MODEL_TEMPLATE|object|string|null  $model
-     * @return \Illuminate\Contracts\Foundation\Application|Model|mixed|object|string|static|MODEL_TEMPLATE
-     */
-    public static function toModel(
-        object|array $data,
-        object|string|null $model = null
-    ) {
-        return (new static($data, $model))->convertToModel();
-    }
-
-    /**
-     * @template SET_DATA
-     * @param  object|string|null  $model
-     * @param  mixed|SET_DATA  $data
-     * @return SET_DATA|array|object
-     */
-    public static function fromModel(
-        object|string|null $model,
-        mixed $data = []
-    ) {
-        return (new static($data, $model))->convertFromModel();
-    }
-
-    /**
-     * @param  object|array  $datas
-     * @param  Collection|null  $modelCollection
-     * @return TransformerCollection|MODEL_TEMPLATE[]
-     */
-    public static function toModelCollection(
-        object|array $datas,
-        Collection $modelCollection = null
-    ): TransformerCollection  {
-        $collection = app(TransformerCollection::class);
-
-        foreach ($datas as $key => $data) {
-            $collection->push(
-                static::toModel($data, $modelCollection ? ($modelCollection[$key] ?? null) : null)
-            );
-        }
-
-        return $collection;
-    }
-
-    /**
-     * @template SET_DATA
-     * @param  Collection  $modelCollection
-     * @param  mixed  $datas
-     * @return TransformerCollection|SET_DATA[]
-     */
-    public static function fromModelCollection(
-        Collection $modelCollection,
-        mixed $datas = []
-    ): TransformerCollection {
-        $collection = app(TransformerCollection::class);
-
-        foreach ($modelCollection as $key => $model) {
-            $collection->push(
-                static::fromModel(
-                    $model, $datas
-                    ? (is_array($datas) ? ($datas[$key] ?? []) : ($datas->{$key} ?? []))
-                    : []
-                )
-            );
-        }
-
-        return $collection;
+        return app(
+            static::class,
+            compact('model', 'data', 'relation', 'parent')
+        );
     }
 }
