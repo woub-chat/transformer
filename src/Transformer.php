@@ -13,6 +13,8 @@ class Transformer
 {
     use TransformerDataCasting;
 
+    protected ?string $modelClass = null;
+
     protected array $toModel = [
 //        'dataField' => 'modelField',
 //        YouTransformer::class => 'modelRelation'
@@ -31,12 +33,14 @@ class Transformer
     protected array $toRelatedModel = [];
 
     public function __construct(
-        public Model|string $model,
+        public Model|string|null $model = null,
         public object|array $data = [],
         public ?Relation $relation = null,
         public ?Transformer $parent = null,
     ) {
-        $this->model = is_string($this->model) ? new $this->model : $this->model;
+        $this->model = $this->model
+            ? (is_string($this->model) ? new $this->model : $this->model)
+            : (is_string($this->modelClass) ? new $this->modelClass : $this->modelClass);
     }
 
     protected function getModel()
