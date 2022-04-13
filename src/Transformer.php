@@ -111,8 +111,8 @@ abstract class Transformer
                 if ($relation instanceof Relation) {
                     /** @var Transformer $dataKey */
                     $this->toRelatedModel[$modelKey] = $dataKey::make(
-                        $relation->getRelated(), $this->data, $relation, $this
-                    );
+                        $relation->getRelated(), [], $relation, $this
+                    )->with($this->cache);
                 }
             } else {
                 $dataToModel[$modelKey] = is_numeric($dataKey) ? null : recursive_get($this->data, $dataKey);
