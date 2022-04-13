@@ -167,7 +167,7 @@ class Transformer
         return $this->model = $this->model->create($input);
     }
 
-    public function toData(): array|object
+    public function toData(): static
     {
         foreach ($this->fromModel as $modelKey => $dataKey) {
             $modelValue = recursive_get($this->model, $modelKey);
@@ -185,8 +185,12 @@ class Transformer
             }
         }
 
+        return $this;
+    }
 
-        return $this->data;
+    public function upload()
+    {
+
     }
 
     public static function make(
