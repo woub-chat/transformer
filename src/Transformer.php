@@ -81,7 +81,7 @@ class Transformer
 
         foreach ($this->toModel as $dataKey => $modelKey) {
 
-            if (class_exists($dataKey)) {
+            if (!is_numeric($dataKey) && class_exists($dataKey)) {
                 $relation = $this->model->{$modelKey}();
                 if ($relation instanceof Relation) {
                     /** @var Transformer $dataKey */
@@ -90,7 +90,7 @@ class Transformer
                     );
                 }
             } else {
-                $dataToModel[$modelKey] = recursive_get($this->data, $dataKey);
+                $dataToModel[$modelKey] = is_numeric($dataKey) ? null : recursive_get($this->data, $dataKey);
                 $methodMutator = 'to'.ucfirst(Str::camel($modelKey)).'Attribute';
                 if (method_exists($this, $methodMutator)) {
                     $dataToModel[$modelKey] = $this->{$methodMutator}($dataToModel[$modelKey]);
