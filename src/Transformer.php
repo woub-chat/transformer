@@ -133,7 +133,14 @@ class Transformer
             $item->toModel()->save();
         }
 
+        $this->saved();
+
         return $result;
+    }
+
+    protected function saved()
+    {
+
     }
 
     protected function updateModel(array $input)
