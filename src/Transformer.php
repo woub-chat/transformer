@@ -95,35 +95,38 @@ abstract class Transformer
             }
 
             return $collection;
-        }
 
-        $dataToModel = [];
+        } else if ($this->data) {
 
-        if ($this->remoteId) {
+            $dataToModel = [];
 
-            $this->toModel[$this->remoteId] = $this->modelId;
-        }
+            if ($this->remoteId) {
 
-        foreach ($this->toModel as $dataKey => $modelKey) {
+                $this->toModel[$this->remoteId] = $this->modelId;
+            }
 
-            if (!is_numeric($dataKey) && class_exists($dataKey)) {
-                $relation = $this->model->{$modelKey}();
-                if ($relation instanceof Relation) {
-                    /** @var Transformer $dataKey */
-                    $this->toRelatedModel[$modelKey] = $dataKey::make(
-                        $relation->getRelated(), [], $relation, $this
-                    )->with($this->cache);
-                }
-            } else {
-                $dataToModel[$modelKey] = is_numeric($dataKey) ? null : recursive_get($this->data, $dataKey);
-                $methodMutator = 'to'.ucfirst(Str::camel($modelKey)).'Attribute';
-                if (method_exists($this, $methodMutator)) {
-                    $dataToModel[$modelKey] = $this->{$methodMutator}($dataToModel[$modelKey]);
+            foreach ($this->toModel as $dataKey => $modelKey) {
+
+                if (!is_numeric($dataKey) && class_exists($dataKey)) {
+                    $relation = $this->model->{$modelKey}();
+                    if ($relation instanceof Relation) {
+                        /** @var Transformer $dataKey */
+                        $this->toRelatedModel[$modelKey] = $dataKey::make(
+                            $relation->getRelated(), [], $relation, $this
+                        )->with($this->cache);
+                    }
+                } else {
+                    $dataToModel[$modelKey] = is_numeric($dataKey) ? null : recursive_get($this->data, $dataKey);
+                    $methodMutator = 'to'.ucfirst(Str::camel($modelKey)).'Attribute';
+                    if (method_exists($this, $methodMutator)) {
+                        $dataToModel[$modelKey] = $this->{$methodMutator}($dataToModel[$modelKey]);
+                    }
                 }
             }
+
+            $this->toModel = $dataToModel;
         }
 
-        $this->toModel = $dataToModel;
 
         return $this;
     }
@@ -147,20 +150,25 @@ abstract class Transformer
 
     public function save()
     {
-        if ($this->model->exists) {
-            $result = $this->updateModel($this->toModel);
-        } else {
-            $result = $this->createModel($this->toModel);
+        if ($this->data) {
+
+            if ($this->model->exists) {
+                $result = $this->updateModel($this->toModel);
+            } else {
+                $result = $this->createModel($this->toModel);
+            }
+
+            foreach ($this->toRelatedModel as $item) {
+
+                $item->toModel()->save();
+            }
+
+            $this->saved();
+
+            return $result;
         }
 
-        foreach ($this->toRelatedModel as $item) {
-
-            $item->toModel()->save();
-        }
-
-        $this->saved();
-
-        return $result;
+        return false;
     }
 
     protected function saved()
