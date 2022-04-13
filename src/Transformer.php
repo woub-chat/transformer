@@ -23,6 +23,8 @@ class Transformer
     protected $classCastCache = [];
     protected $dateFormat = 'Y-m-d H:i:s';
 
+    protected array $cache = [];
+
     /**
      * @var array|Transformer[]
      */
@@ -97,6 +99,23 @@ class Transformer
         return $this;
     }
 
+    public function with(string|array $name, mixed $value = null): static
+    {
+        if (is_array($name)) {
+
+            foreach ($name as $key => $item) {
+
+                $this->with($key, $item);
+            }
+
+            return $this;
+        }
+
+        $this->cache[$name] = $value;
+
+        return $this;
+    }
+
     public function save()
     {
         if ($this->model->exists) {
@@ -155,5 +174,15 @@ class Transformer
             static::class,
             compact('model', 'data', 'relation', 'parent')
         );
+    }
+
+    public function __get(string $name)
+    {
+        return $this->cache[$name] ?? null;
+    }
+
+    public function __set(string $name, $value): void
+    {
+        $this->cache[$name] = $value;
     }
 }
