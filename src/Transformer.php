@@ -38,9 +38,21 @@ class Transformer
         public ?Relation $relation = null,
         public ?Transformer $parent = null,
     ) {
-        $this->model = $this->model
-            ? (is_string($this->model) ? new $this->model : $this->model)
-            : (is_string($this->modelClass) ? new $this->modelClass : $this->modelClass);
+        $this->withModel($this->model?:$this->modelClass);
+    }
+
+    public function withModel(Model|string $model): static
+    {
+        $this->model = is_string($model) ? new $model : $model;
+
+        return $this;
+    }
+
+    public function withData(object|array $data): static
+    {
+        $this->data = $data;
+
+        return $this;
     }
 
     protected function getModel()
