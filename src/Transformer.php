@@ -82,7 +82,9 @@ class Transformer
             foreach ($this->data as $datum) {
 
                 $collection->push(
-                    static::make($this->model, $datum)->toModel()
+                    static::make($this->model, $datum)
+                        ->with($this->cache)
+                        ->toModel()
                 );
             }
 
