@@ -9,7 +9,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-class Transformer
+abstract class Transformer
 {
     use TransformerDataCasting;
 
@@ -20,6 +20,9 @@ class Transformer
 //        YouTransformer::class => 'modelRelation'
     ];
     protected array $fromModel = [];
+
+    protected ?string $modelId = 'remote_id';
+    protected ?string $remoteId = null;
 
     protected $casts = [];
     protected $classCastCache = [];
@@ -92,6 +95,11 @@ class Transformer
         }
 
         $dataToModel = [];
+
+        if ($this->remoteId) {
+
+            $this->toModel[$this->remoteId] = $this->modelId;
+        }
 
         foreach ($this->toModel as $dataKey => $modelKey) {
 
