@@ -175,8 +175,15 @@ abstract class Transformer
         return $this->model = $this->model->create($input);
     }
 
+    protected function getDataForUpload(): object|array
+    {
+        return $this->getData();
+    }
+
     public function toData(): static
     {
+        $this->data = $this->getDataForUpload();
+
         foreach ($this->fromModel as $modelKey => $dataKey) {
             $modelValue = recursive_get($this->model, $modelKey);
 
