@@ -180,7 +180,7 @@ class Transformer
         object|array $data = [],
         ?Relation $relation = null,
         ?Transformer $parent = null,
-    ) {
+    ): static {
         return app(
             static::class,
             compact('model', 'data', 'relation', 'parent')
