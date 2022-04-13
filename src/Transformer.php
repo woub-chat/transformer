@@ -75,8 +75,12 @@ abstract class Transformer
 
     public function toModel(): TransformerCollection|static
     {
-        $this->model = $this->getModel();
-        $this->data = $this->getData();
+        if (!$this->model) {
+            $this->model = $this->getModel();
+        }
+        if (!$this->data) {
+            $this->data = $this->getData();
+        }
 
         if ($this->data instanceof Collection) {
 
@@ -182,7 +186,9 @@ abstract class Transformer
 
     public function toData(): static
     {
-        $this->data = $this->getDataForUpload();
+        if (!$this->data) {
+            $this->data = $this->getDataForUpload();
+        }
 
         foreach ($this->fromModel as $modelKey => $dataKey) {
             $modelValue = recursive_get($this->model, $modelKey);
