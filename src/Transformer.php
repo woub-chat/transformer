@@ -169,7 +169,7 @@ class Transformer
     }
 
     public static function make(
-        Model|string $model,
+        Model|string|null $model = null,
         object|array $data = [],
         ?Relation $relation = null,
         ?Transformer $parent = null,
