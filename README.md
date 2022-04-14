@@ -16,32 +16,82 @@ php artisan make:transformer UserTransformer -m User
 ```
 Describe all the fields that you will fill in the new class `App\Transformers\UserTransformer` in the `$toModel` variable:
 ```php
+use Bfg\Transformer\Transformer;
 ...
 class UserTransformer extends Transformer
 {
-    protected $model = User::class;
+    /**
+     * If your data that you received from 
+     * a third-party source have an Identifier, 
+     * then you need to specify this field.
+     * @var string|null 
+     */
+    protected ?string $remoteId = "ID";
 
-    protected $toModel = [
-        'userName' => 'name',
-        'userEmail' => 'email',
+    /**
+     * An alternative source indicate the model 
+     * if it is not sent to the transformer.
+     * @var string|null 
+     */
+    protected ?string $modelClass = User::class;
+
+    /**
+     * Mapping to send data generation into the model.
+     * @var string[]
+     */
+    protected array $toModel = [
+        'FullName' => 'name',
+        'Email' => 'email',
         
         // or if you identical key names:
         'name',
         'email',
+        
+        // for related iteration
+        ContactsTransformer::class // The transformer of contacts 
+            => 'contacts', // The relation name in the model
     ];
+    
+    /**
+     * Mapping for the direction of data generation 
+     * from the model, back to third-party service.
+     * @var string[]
+     */
+    protected array $fromModel = [
+        'name' => ['FirstName', 'LastName'],
+        'address' => 'Address',
+        'email' => 'Email',
+        'phone' => 'Phone',
+    ];
+    
+    /**
+     * To implement the data unloading mechanism 
+     * on third-party service.
+     * @return void
+     */
+    public function upload()
+    {
+
+    }
 }
 ```
 
 ### Mutators
 For fully transformation, it is often necessary to process a little more accurately, for this there are mutators in different directions:
 ```php
+use Bfg\Transformer\Transformer;
 ...
 class UserTransformer extends Transformer
 {
     ...
-    protected $toModel = [
-        'userName' => 'name',
-        'userEmail' => 'email',
+    protected array $toModel = [
+        'FullName' => 'name',
+        'Email' => 'email',
+    ];
+    
+    protected array $fromModel = [
+        'name' => ['FirstName', 'LastName'],
+        'email' => 'Email',
     ];
     
     protected function toNameAttribute($dataValue)
@@ -53,6 +103,21 @@ class UserTransformer extends Transformer
     }
     
     protected function fromNameAttribute($modelValue)
+    {    
+        return $modelValue;
+    }
+    
+    protected function forFirstNameDataAttribute($modelValue)
+    {    
+        return $modelValue;
+    }
+    
+    protected function forLastNameDataAttribute($modelValue)
+    {    
+        return $modelValue;
+    }
+    
+    protected function forEmailDataAttribute($modelValue)
     {    
         return $modelValue;
     }
@@ -72,27 +137,11 @@ and their functionality is absolutely identical (except for the `set` of custom 
 ```
 > Applies to data, not to the model.
 
-### Defaults
-```php
-...
-    protected $toModelDefault = [
-        'active' => 1
-    ];
-...
-```
-
-```php
-...
-    protected $fromModelDefault = [
-        'active' => 1
-    ];
-...
-```
-
 
 ### Model catch
 In order to catch a model definition for a transformer (based on data), you can use the `getModel` method:
 ```php
+use Bfg\Transformer\Transformer;
 use App\Models\User;
 ...
 class UserTransformer extends Transformer
@@ -106,6 +155,28 @@ class UserTransformer extends Transformer
 }
 ```
 
+### Data catch
+For a transformer, you can determine the value for processing directly inside, 
+this mechanism allows you to generate built-in dependent nesting. 
+According to the rules, if a collection `Illuminate\Support\Collection` is returned, 
+then the selection of a transformer instance will be created for each entry.
+```php
+use Bfg\Transformer\Transformer;
+use App\Models\User;
+...
+/**
+ * @property-read ApiService $api For example some "ApiService" class
+ */
+class UserTransformer extends Transformer
+{
+    ...
+    protected function getData()
+    {    
+        return $this->api->findUser($this->model->remote_id);
+    }
+}
+```
+
 ### Data to model
 ```php
 use App\Transformers\UserTransformer;
@@ -115,9 +186,15 @@ $data = [
     'userEmail' => 'thomas@example.com',
 ]; // for example, any data
 
-$model = UserTransformer::toModel($data); // Instance of User model
+$model = UserTransformer::make()
+    ->withData($data)
+    ->toModel(); // Instance of User model
+    
 // Or from any model
-$model = UserTransformer::toModel($data, User::find(1)); // With my instance of User model
+$model = UserTransformer::make()
+    ->withData($data)
+    ->withModel(User::find(1))
+    ->toModel(); // With my instance of User model
 
 $model->save();
 ```
@@ -129,55 +206,14 @@ use App\Transformers\UserTransformer;
 ...
 $model = User::find(1);
 
-$data = UserTransformer::fromModel($model); 
+$data = UserTransformer::make()->withModel($model)->toData()->data; 
     // => ['userName' => 'Thomas','userEmail' => 'thomas@example.com']
 
 // Or with you data filling
 $fillData = (object) ['userName' => null, 'userEmail' => null, 'otherData' => 'test']
-$data = UserTransformer::fromModel($model, $fillData); 
-    // => {
-    //      +"userName": "Thomas",
-    //      +"userEmail": "thomas@example.com",
-    //      +"otherData": "test",
-    //    }
-
+UserTransformer::make()->withModel($model)->withData($fillData)->toData()->upload();
 ```
 
-### Data to model collection
-```php
-use App\Models\User;
-use App\Transformers\UserTransformer;
-use App\Transformers\TransformerCollection;
-...
-$datas = [
-    [
-        'userName' => 'Thomas',
-        'userEmail' => 'thomas@example.com',
-    ],
-    [
-        'userName' => 'Ali',
-        'userEmail' => 'ali@example.com',
-    ],
-]; // for example, any data
-
-/** @var TransformerCollection $collection */
-$collection = UserTransformer::toModelCollection($datas); // The collection instance of models Instances
-    // => Bfg\Transformer\TransformerCollection {
-    //      all: [
-    //          App\Models\User {
-    //              name: "Thomas",
-    //              email: "thomas@example.com"
-    //          },
-    //          App\Models\User {
-    //              name: "Ali",
-    //              email: "ali@example.com"
-    //          },
-    //      ]
-    //    }
-   
-// Or with ready collection of models   
-$collection = UserTransformer::toModelCollection($datas, User::where('active', 1)->get());
-```
 Next, the collection perceives all the methods of the model to the entire collection:
 ```php
 use App\Transformers\TransformerCollection;
@@ -195,32 +231,4 @@ $collection->transaction()->save();
 $collection->transaction()->save()->update([
     'api_updated_at' => now()
 ]);
-```
-
-### Data from model collection
-```php
-use App\Models\User;
-use App\Transformers\UserTransformer;
-use App\Transformers\TransformerCollection;
-...
-$modelCollection = User::where('active', 1)->get();
-
-$data = UserTransformer::fromModelCollection($modelCollection); 
-    // => Bfg\Transformer\TransformerCollection {
-    //      all: [
-    //          ['userName' => 'Thomas','userEmail' => 'thomas@example.com'],
-    //          ['userName' => 'Ali','userEmail' => 'ali@example.com'],
-    //      ]
-    //    }
-
-// Or with you data filling
-$fillData = (object) [
-    ['userName' => null, 'userEmail' => null, 'otherData' => 'test'],
-    ['userName' => null, 'userEmail' => null, 'otherData' => 'test2'],
-];
-$data = UserTransformer::fromModelCollection($modelCollection, $fillData); 
-    // => {
-    //      ['userName' => 'Thomas','userEmail' => 'thomas@example.com', 'otherData' => 'test'],
-    //      ['userName' => 'Ali','userEmail' => 'ali@example.com', 'otherData' => 'test2'],
-    //    }
 ```
