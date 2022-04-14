@@ -200,19 +200,27 @@ abstract class Transformer
             $this->data = $this->getDataForUpload();
         }
 
-        foreach ($this->fromModel as $modelKey => $dataKey) {
-            $modelValue = recursive_get($this->model, $modelKey);
+        foreach ($this->fromModel as $modelKey => $dataKeys) {
+            foreach ((array) $dataKeys as $dataKey) {
+                $modelValue = recursive_get($this->model, $modelKey);
 
-            $methodMutator = 'from'.ucfirst(Str::camel($modelKey)).'Attribute';
+                $methodMutator = 'from'.ucfirst(Str::camel($modelKey)).'Attribute';
 
-            if (method_exists($this, $methodMutator)) {
-                $modelValue = $this->{$methodMutator}($modelValue);
-            }
+                if (method_exists($this, $methodMutator)) {
+                    $modelValue = $this->{$methodMutator}($modelValue);
+                }
 
-            if (is_array($this->data)) {
-                Arr::set($this->data, $dataKey, $modelValue);
-            } else {
-                $this->data->{$dataKey} = $modelValue;
+                $methodMutator = 'for'.ucfirst(Str::camel($dataKey)).'DataAttribute';
+
+                if (method_exists($this, $methodMutator)) {
+                    $modelValue = $this->{$methodMutator}($modelValue);
+                }
+
+                if (is_array($this->data)) {
+                    Arr::set($this->data, $dataKey, $modelValue);
+                } else {
+                    $this->data->{$dataKey} = $modelValue;
+                }
             }
         }
 
