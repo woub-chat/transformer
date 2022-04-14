@@ -88,7 +88,7 @@ abstract class Transformer
             foreach ($this->data as $datum) {
 
                 $collection->push(
-                    static::make($this->model, $datum)
+                    static::make($this->model, $datum, $this->relation, $this->parent)
                         ->with($this->cache)
                         ->toModel()
                 );
@@ -110,10 +110,7 @@ abstract class Transformer
                 if (!is_numeric($dataKey) && class_exists($dataKey)) {
                     $relation = $this->model->{$modelKey}();
                     if ($relation instanceof Relation) {
-                        /** @var Transformer $dataKey */
-                        $this->toRelatedModel[$modelKey] = $dataKey::make(
-                            $relation->getRelated(), [], $relation, $this
-                        )->with($this->cache);
+                        $this->toRelatedModel[$dataKey] = $modelKey;
                     }
                 } else {
                     $dataToModel[$modelKey] = is_numeric($dataKey) ? null : recursive_get($this->data, $dataKey);
@@ -158,12 +155,18 @@ abstract class Transformer
                 $result = $this->createModel($this->toModel);
             }
 
-            foreach ($this->toRelatedModel as $item) {
-
-                $item->toModel()->save();
-            }
-
             $this->saved();
+
+            /** @var Transformer $transformer */
+            foreach ($this->toRelatedModel as $transformer => $relation) {
+
+                $relation = $this->model->{$relation}();
+
+                $transformer::make($relation->getRelated(), [], $relation, $this)
+                    ->with($this->cache)
+                    ->toModel()
+                    ->save();
+            }
 
             return $result;
         }
@@ -178,7 +181,7 @@ abstract class Transformer
 
     protected function updateModel(array $input)
     {
-        return ($this->relation ?? $this->model)->update($input);
+        return $this->model->update($input);
     }
 
     protected function createModel(array $input)
