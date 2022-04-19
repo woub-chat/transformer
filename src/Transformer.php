@@ -40,7 +40,9 @@ abstract class Transformer
         public ?Relation $relation = null,
         public ?Transformer $parent = null,
     ) {
-        $this->withModel($this->model?:$this->modelClass);
+        if ($setModel = $this->model?:$this->modelClass) {
+            $this->withModel($setModel);
+        }
     }
 
     public function withModel(Model|string $model): static
