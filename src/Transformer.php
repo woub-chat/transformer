@@ -13,16 +13,15 @@ abstract class Transformer
 {
     use TransformerDataCasting;
 
-    protected ?string $modelClass = null;
+    public ?string $modelClass = null;
+    public ?string $modelId = 'remote_id';
+    public ?string $remoteId = null;
 
     protected array $toModel = [
 //        'dataField' => 'modelField',
 //        YouTransformer::class => 'modelRelation'
     ];
     protected array $fromModel = [];
-
-    protected ?string $modelId = 'remote_id';
-    protected ?string $remoteId = null;
 
     protected $casts = [];
     protected $classCastCache = [];
