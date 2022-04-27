@@ -17,6 +17,7 @@ abstract class Transformer
     public ?string $modelId = 'remote_id';
     public ?string $remoteId = null;
     public array $child = [];
+    public array $lastChild = [];
 
     protected array $toModel = [
 //        'dataField' => 'modelField',
@@ -164,7 +165,7 @@ abstract class Transformer
 
                 $relation = $this->model->{$relation}();
 
-                $transformer = $this->child[] = $transformer::make(
+                $transformer = $this->child[] = $this->lastChild[$transformer] = $transformer::make(
                     $relation->getRelated(), [], $relation, $this
                 );
 
