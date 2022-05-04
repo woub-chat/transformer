@@ -78,11 +78,11 @@ abstract class Transformer
 
     public function toModel(): TransformerCollection|static
     {
-        $this->model = $this->getModel();
-
         if (!$this->data) {
             $this->data = $this->getData();
         }
+
+        $this->model = $this->getModel();
 
         if ($this->data instanceof Collection) {
 
