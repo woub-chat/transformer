@@ -82,8 +82,6 @@ abstract class Transformer
             $this->data = $this->getData();
         }
 
-        $this->model = $this->getModel();
-
         if ($this->data instanceof Collection) {
 
             $collection = app(TransformerCollection::class);
@@ -100,6 +98,8 @@ abstract class Transformer
             return $collection;
 
         } else if ($this->data) {
+
+            $this->model = $this->getModel();
 
             $dataToModel = [];
 
