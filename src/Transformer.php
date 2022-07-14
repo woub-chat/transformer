@@ -158,20 +158,23 @@ abstract class Transformer
                 $result = $this->createModel($this->toModel);
             }
 
-            $this->saved();
+            if ($result) {
 
-            /** @var Transformer $transformer */
-            foreach ($this->toRelatedModel as $transformer => $relation) {
+                $this->saved();
 
-                $relation = $this->model->{$relation}();
+                /** @var Transformer $transformer */
+                foreach ($this->toRelatedModel as $transformer => $relation) {
 
-                $transformer = $this->child[] = $this->lastChild[$transformer] = $transformer::make(
-                    $relation->getRelated(), [], $relation, $this
-                );
+                    $relation = $this->model->{$relation}();
 
-                $transformer->with($this->cache)
-                    ->toModel()
-                    ->save();
+                    $transformer = $this->child[] = $this->lastChild[$transformer] = $transformer::make(
+                        $relation->getRelated(), [], $relation, $this
+                    );
+
+                    $transformer->with($this->cache)
+                        ->toModel()
+                        ->save();
+                }
             }
 
             return $result;
