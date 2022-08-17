@@ -213,10 +213,10 @@ abstract class Transformer
         foreach ($this->fromModel as $modelKey => $dataKeys) {
             foreach ((array) $dataKeys as $dataKey) {
 
-                if (!is_numeric($dataKey) && class_exists($dataKey)) {
-                    $relation = $this->model->{$modelKey}();
+                if (!is_numeric($modelKey) && class_exists($modelKey)) {
+                    $relation = $this->model->{$dataKey}();
                     if ($relation instanceof Relation) {
-                        $this->toRelatedData[$dataKey] = $modelKey;
+                        $this->toRelatedData[$modelKey] = $dataKey;
                     }
                 } else {
 
@@ -275,6 +275,7 @@ abstract class Transformer
             );
 
             $transformer->with($this->cache)
+                ->withData(collect())
                 ->toData()
                 ->create();
         }
