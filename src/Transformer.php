@@ -35,6 +35,7 @@ abstract class Transformer
      * @var array|Transformer[]
      */
     protected array $toRelatedModel = [];
+    protected array $toRelatedData = [];
 
     public function __construct(
         public Model|string|null $model = null,
@@ -211,24 +212,33 @@ abstract class Transformer
 
         foreach ($this->fromModel as $modelKey => $dataKeys) {
             foreach ((array) $dataKeys as $dataKey) {
-                $modelValue = recursive_get($this->model, $modelKey);
 
-                $methodMutator = 'from'.ucfirst(Str::camel($modelKey)).'Attribute';
-
-                if (method_exists($this, $methodMutator)) {
-                    $modelValue = $this->{$methodMutator}($modelValue);
-                }
-
-                $methodMutator = 'for'.ucfirst(Str::camel($dataKey)).'DataAttribute';
-
-                if (method_exists($this, $methodMutator)) {
-                    $modelValue = $this->{$methodMutator}($modelValue);
-                }
-
-                if (is_array($this->data)) {
-                    Arr::set($this->data, $dataKey, $modelValue);
+                if (!is_numeric($dataKey) && class_exists($dataKey)) {
+                    $relation = $this->model->{$modelKey}();
+                    if ($relation instanceof Relation) {
+                        $this->toRelatedData[$dataKey] = $modelKey;
+                    }
                 } else {
-                    $this->data->{$dataKey} = $modelValue;
+
+                    $modelValue = recursive_get($this->model, $modelKey);
+
+                    $methodMutator = 'from'.ucfirst(Str::camel($modelKey)).'Attribute';
+
+                    if (method_exists($this, $methodMutator)) {
+                        $modelValue = $this->{$methodMutator}($modelValue);
+                    }
+
+                    $methodMutator = 'for'.ucfirst(Str::camel($dataKey)).'DataAttribute';
+
+                    if (method_exists($this, $methodMutator)) {
+                        $modelValue = $this->{$methodMutator}($modelValue);
+                    }
+
+                    if (is_array($this->data)) {
+                        Arr::set($this->data, $dataKey, $modelValue);
+                    } else {
+                        $this->data->{$dataKey} = $modelValue;
+                    }
                 }
             }
         }
@@ -238,7 +248,36 @@ abstract class Transformer
 
     public function upload()
     {
+        /** @var Transformer $transformer */
+        foreach ($this->toRelatedData as $transformer => $relation) {
 
+            $relation = $this->model->{$relation}();
+
+            $transformer = $transformer::make(
+                $relation->getRelated(), [], $relation, $this
+            );
+
+            $transformer->with($this->cache)
+                ->toData()
+                ->upload();
+        }
+    }
+
+    public function create()
+    {
+        /** @var Transformer $transformer */
+        foreach ($this->toRelatedData as $transformer => $relation) {
+
+            $relation = $this->model->{$relation}();
+
+            $transformer = $transformer::make(
+                $relation->getRelated(), [], $relation, $this
+            );
+
+            $transformer->with($this->cache)
+                ->toData()
+                ->create();
+        }
     }
 
     public static function make(
