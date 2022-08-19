@@ -270,14 +270,16 @@ abstract class Transformer
 
             $relation = $this->model->{$relation}();
 
-            $transformer = $transformer::make(
-                $relation->getRelated(), [], $relation, $this
-            );
+            foreach ($relation->get() as $item) {
 
-            $transformer->with($this->cache)
-                ->withData(collect())
-                ->toData()
-                ->create();
+                $transformer = $transformer::make(
+                    $item, $item, $relation, $this
+                );
+
+                $transformer->with($this->cache)
+                    ->toData()
+                    ->create();
+            }
         }
     }
 
