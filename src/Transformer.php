@@ -168,13 +168,16 @@ abstract class Transformer
 
                     $relation = $this->model->{$relation}();
 
-                    $transformer = $this->child[] = $this->lastChild[$transformer] = $transformer::make(
-                        $relation->getRelated(), [], $relation, $this
-                    );
+                    if ($this->checkChildBeforeSave($transformer, $relation)) {
 
-                    $transformer->with($this->cache)
-                        ->toModel()
-                        ->save();
+                        $transformer = $this->child[] = $this->lastChild[$transformer] = $transformer::make(
+                            $relation->getRelated(), [], $relation, $this
+                        );
+
+                        $transformer->with($this->cache)
+                            ->toModel()
+                            ->save();
+                    }
                 }
             }
 
@@ -182,6 +185,11 @@ abstract class Transformer
         }
 
         return false;
+    }
+
+    protected function checkChildBeforeSave(string $transformer, Relation $relation)
+    {
+        return true;
     }
 
     protected function saved()
