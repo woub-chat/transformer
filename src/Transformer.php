@@ -168,7 +168,7 @@ abstract class Transformer
 
                     $relation = $this->model->{$relation}();
 
-                    if ($transformer::checkChildBeforeSave($transformer, $relation)) {
+                    if ($transformer::checkChildBeforeSave($transformer, $relation, $this)) {
 
                         $transformer = $this->child[] = $this->lastChild[$transformer] = $transformer::make(
                             $relation->getRelated(), [], $relation, $this
@@ -187,7 +187,7 @@ abstract class Transformer
         return false;
     }
 
-    protected static function checkChildBeforeSave(string $transformer, Relation $relation)
+    protected static function checkChildBeforeSave(string $transformer, Relation $relation, Transformer $parent)
     {
         return true;
     }
