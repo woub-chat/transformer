@@ -197,14 +197,14 @@ abstract class Transformer
 
     }
 
-    protected function updateModel(array $input)
+    protected function updateModel(...$attributes)
     {
-        return $this->model->update($input);
+        return $this->model->update(...$attributes);
     }
 
-    protected function createModel(array $input)
+    protected function createModel(...$attributes)
     {
-        return $this->model = ($this->relation ?? $this->model)->create($input);
+        return $this->model = ($this->relation ?? $this->model)->create(...$attributes);
     }
 
     protected function getDataForUpload(): object|array
