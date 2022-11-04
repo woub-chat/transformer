@@ -112,9 +112,17 @@ abstract class Transformer
             foreach ($this->toModel as $dataKey => $modelKey) {
 
                 if (!is_numeric($dataKey) && class_exists($dataKey)) {
-                    $relation = $this->model->{$modelKey}();
-                    if ($relation instanceof Relation) {
-                        $this->toRelatedModel[$dataKey] = $modelKey;
+                    $name = class_basename($dataKey);
+                    $isMethod = 'is' . $name;
+                    $methodExists = method_exists($this, $isMethod);
+                    if (
+                        ($methodExists && $this->{$isMethod}())
+                        || ! $methodExists
+                    ) {
+                        $relation = $this->model->{$modelKey}();
+                        if ($relation instanceof Relation) {
+                            $this->toRelatedModel[$dataKey] = $modelKey;
+                        }
                     }
                 } else {
                     $dataToModel[$modelKey] = is_numeric($dataKey) ? null : recursive_get($this->data, $dataKey);
