@@ -134,10 +134,16 @@ abstract class Transformer
             }
 
             $this->toModel = $dataToModel;
+            $this->model = $this->getModelInstance($dataToModel);
         }
 
 
         return $this;
+    }
+
+    protected function getModelInstance(array $data): Model|string|null
+    {
+        return $this->model;
     }
 
     public function with(string|array $name, mixed $value = null): static
