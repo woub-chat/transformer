@@ -77,7 +77,7 @@ abstract class Transformer
         return null;
     }
 
-    public function toModel(): TransformerCollection|static
+    public function toModel(callable $cbOnCreate): TransformerCollection|static
     {
         if (!$this->data) {
             $this->data = $this->getData();
@@ -92,7 +92,7 @@ abstract class Transformer
                 $collection->push(
                     static::make($this->model, $datum, $this->relation, $this->parent)
                         ->with($this->cache)
-                        ->toModel()
+                        ->toModel($cbOnCreate)
                 );
             }
 
@@ -101,6 +101,8 @@ abstract class Transformer
         } else if ($this->data) {
 
             $this->model = $this->getModel();
+
+            call_user_func($cbOnCreate, $this);
 
             $dataToModel = [];
 
