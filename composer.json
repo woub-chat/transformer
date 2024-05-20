@@ -1,14 +1,9 @@
 {
-    "name": "bfg/transformer",
+    "name": "woub-chat/transformer",
     "description": "",
-    "type": "bfg-app",
+    "type": "app",
     "keywords": ["laravel", "extension", "transformer"],
     "license": "MIT",
-    "authors": [
-        {
-            "name": "bfg"
-        }
-    ],
     "prefer-stable": true,
     "require": {
         "php": ">=8.0.0",
